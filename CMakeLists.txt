@@ -19,19 +19,19 @@
 # SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10)
 project(ublox)
 
 set(CMAKE_CXX_FLAGS "-std=c++17")
 
 find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system)
-find_package(async_comm REQUIRED)
-if (NOT ${async_comm_FOUND})
+# find_package(async_comm REQUIRED)
+# if (NOT ${async_comm_FOUND})
 	add_subdirectory(lib/async_comm)
 	set(async_comm_LIBRARIES async_comm)
 	set(async_comm_INCLUDE_DIRS lib/async_comm/include)
-endif()
+# endif()
 
 add_library(UBLOX
     src/ublox.cpp
@@ -44,7 +44,7 @@ add_library(UBLOX
 )
 target_include_directories(UBLOX PUBLIC include)
 
-option(BUILD_TESTS "Build Tests" ON)
+option(BUILD_TESTS "Build Tests" OFF)
 if (${BUILD_TESTS})
     message(STATUS "Building Tests")
     find_package(GTest REQUIRED)
@@ -78,7 +78,7 @@ if (${BUILD_EXAMPLES})
 	target_include_directories(read_log PRIVATE ${async_comm_INCLUDE_DIRS})
 endif()
 
-option(BUILD_ROS "Build ROS Node" ON)
+option(BUILD_ROS "Build ROS Node" OFF)
 if (${BUILD_ROS})
     message(STATUS "BUILDING UBLOX ROS PACKAGE")
 	find_package(catkin REQUIRED COMPONENTS
@@ -113,6 +113,4 @@ if (${BUILD_ROS})
     target_include_directories(ublox_ros PUBLIC ${catkin_INCLUDE_DIRS} PRIVATE ${async_comm_INCLUDE_DIRS})
     add_dependencies(ublox_ros ${catkin_EXPORTED_TARGETS} )
     add_dependencies(ublox_ros ublox_generate_messages_cpp)
-
-
 endif()

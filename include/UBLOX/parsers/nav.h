@@ -270,4 +270,5 @@ inline std::ostream &operator<<(std::ostream &os, const Ephemeris &eph)
     os << "crs " << eph.crs << "\n";
     os << "cic " << eph.cic << "\n";
     os << "cis " << eph.cis << "\n";
+    return os;
 }

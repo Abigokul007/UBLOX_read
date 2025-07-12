@@ -115,6 +115,9 @@ bool NavParser::convertUBX(const ublox::RXM_SFRBX_t &msg)
             return decodeGalileo((uint8_t *)msg.dwrd, eph);
         case GnssID_Beidou:
             return decodeBeidou((uint8_t *)msg.dwrd, eph);
+        default:
+            DBG("Unknown GNSS ID: %d\n", msg.gnssId);
+            return false;
         }
     }
 }
@@ -296,6 +299,8 @@ bool NavParser::decodeGlonassFrame1(const uint8_t *buf, GlonassEphemeris *geph)
     int dbg = frame_tod_ms / UTCTime::SEC_IN_DAY;
     geph->tof = UTCTime::fromGlonassTimeOfDay(GPS_time_, frame_tod_ms);
     geph->got_frame1 = true;
+
+    return true;
 }
 
 bool NavParser::decodeGlonassFrame2(const uint8_t *buf, GlonassEphemeris *geph)
@@ -313,6 +318,8 @@ bool NavParser::decodeGlonassFrame2(const uint8_t *buf, GlonassEphemeris *geph)
     uint64_t eph_tod_ms = (tb * 60 * 15) * 1000;
     geph->toe = UTCTime::fromGlonassTimeOfDay(GPS_time_, eph_tod_ms);
     geph->got_frame2 = true;
+
+    return true;
 }
 
 bool NavParser::decodeGlonassFrame3(const uint8_t *buf, GlonassEphemeris *geph)
@@ -325,7 +332,10 @@ bool NavParser::decodeGlonassFrame3(const uint8_t *buf, GlonassEphemeris *geph)
     geph->acc[2] = getBitGlo<5>(buf, 45) * P2_30 * 1E3;
     geph->pos[2] = getBitGlo<27>(buf, 50) * P2_11 * 1E3;
     geph->got_frame3 = true;
+
+    return true;
 }
+
 bool NavParser::decodeGlonassFrame4(const uint8_t *buf, GlonassEphemeris *geph)
 {
     geph->taun = getBitGlo<22>(buf, 5) * P2_30;
@@ -337,6 +347,8 @@ bool NavParser::decodeGlonassFrame4(const uint8_t *buf, GlonassEphemeris *geph)
     // int slot = getBit<5>(buf, 70);
     // int M = getBit<2>(buf, 75);
     geph->got_frame4 = true;
+
+    return true;
 }
 
 bool NavParser::decodeGlonassString(const uint8_t *buf, GlonassEphemeris *geph)
@@ -445,6 +457,7 @@ bool NavParser::decodeGlonass(const ublox::RXM_SFRBX_t &msg, GlonassEphemeris &g
 bool NavParser::decodeBeidou(const uint8_t *const buf, Ephemeris *eph)
 {
     // TODO
+    return false;
 }
 
 bool decodeGalileoSubframe0(const uint8_t *const buf, Ephemeris *eph)
@@ -457,12 +470,34 @@ bool decodeGalileoSubframe0(const uint8_t *const buf, Ephemeris *eph)
     int week = getBit(buf, i, 12);
     i += 12; /* gst-week */
     double tow = getBit(buf, i, 20);
+
+    return true;
 }
-bool decodeGalileoSubframe1(const uint8_t *const buf, Ephemeris *eph) {}
-bool decodeGalileoSubframe2(const uint8_t *const buf, Ephemeris *eph) {}
-bool decodeGalileoSubframe3(const uint8_t *const buf, Ephemeris *eph) {}
-bool decodeGalileoSubframe4(const uint8_t *const buf, Ephemeris *eph) {}
-bool decodeGalileoSubframe5(const uint8_t *const buf, Ephemeris *eph) {}
+
+bool decodeGalileoSubframe1(const uint8_t *const buf, Ephemeris *eph) 
+{
+    return false;  // TODO: Implement this function
+}
+
+bool decodeGalileoSubframe2(const uint8_t *const buf, Ephemeris *eph) 
+{
+    return false;  // TODO: Implement this function
+}
+
+bool decodeGalileoSubframe3(const uint8_t *const buf, Ephemeris *eph) 
+{
+    return false;  // TODO: Implement this function
+}
+
+bool decodeGalileoSubframe4(const uint8_t *const buf, Ephemeris *eph) 
+{
+    return false;  // TODO: Implement this function
+}
+
+bool decodeGalileoSubframe5(const uint8_t *const buf, Ephemeris *eph) 
+{
+    return false;  // TODO: Implement this function
+}
 
 bool NavParser::decode_gal_inav(const unsigned char *buff, Ephemeris *eph)
 {

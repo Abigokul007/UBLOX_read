@@ -104,3 +104,8 @@ int main(int argc, char** argv)
     std::cout << "\nquitting" << std::endl;
     return 0;
 }
+
+// mkdir build
+// cd build
+// cmake .. -DBUILD_ROS=OFF
+// make -j

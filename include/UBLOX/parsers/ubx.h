@@ -76,7 +76,12 @@ public:
     void poll_value();
     void restart();
     void disable_nmea();
-    void start_survey_in();
+
+    void start_survey_in(uint32_t survey_in_time_s, uint32_t survey_in_accuracy_m);
+
+    void disable_survey_in();
+
+    void set_fixed_lla_hp(double lat_deg, double lon_deg, double alt_m, double position_accuracy_m);
 
     bool get_version();
 

@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     ac_adapter::UDP udp("localhost", 16145, "localhost", 16140);
     if (!udp.init())
         throw std::runtime_error("Failed to initialize Rover receive UDP");
-    ublox.config_rover(&udp);
+    // ublox.config_rover(&udp);
 
     // look for Ctrl+C and quit
     signal(SIGINT, inthand);

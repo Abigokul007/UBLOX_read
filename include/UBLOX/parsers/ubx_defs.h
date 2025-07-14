@@ -181,6 +181,22 @@ enum
     RXM_SFRBX = 0x13  // Broadcast Navigation Data Subframe (ephemeris)
 };
 
+enum
+{
+    RTCM_1005 = 0x05,
+    RTCM_1074 = 0x4A,
+    RTCM_1077 = 0x4D,
+    RTCM_1084 = 0x54,
+    RTCM_1087 = 0x57,
+    RTCM_1094 = 0x5E,
+    RTCM_1097 = 0x61,
+    RTCM_1124 = 0x7C,
+    RTCM_1127 = 0x7F,
+    RTCM_1230 = 0xE6,
+    RTCM_4072_0 = 0xFE,
+    RTCM_4072_1 = 0xFD
+};
+
 typedef enum
 {
     START,
@@ -434,10 +450,17 @@ typedef struct
 
     enum
     {
-        MSGOUT_SVIN = 0x2091008b,
-        TMODE_MODE = 0x20030001,
-        TMODE_SVIN_MIN_DUR = 0x40030010,    // survey in minimum duration s
-        TMODE_SVIN_ACC_LIMIT = 0x40030011,  // Survey-in position accuracy limit mm
+        MSGOUT_SVIN             = 0x2091008b,
+        TMODE_MODE              = 0x20030001, // Receiver mode: 0-disabled, 1-survey-in, 2-fixed
+        TMODE_POS_TYPE          = 0x20030002, // Determines whether the ARP position is given in ECEF or LAT/LON/HEIGHT: 0-ECEF, 1-LLH
+        TMODE_LAT               = 0x40030009, // Latitude of the ARP position (deg)
+        TMODE_LON               = 0x4003000a, // Longitude of the ARP position (deg)
+        TMODE_HEIGHT            = 0x4003000b, // Latitude of the ARP position (cm)
+        TMODE_LAT_HP            = 0x2003000c, // Latitude of the ARP position (deg)
+        TMODE_LON_HP            = 0x2003000d, // Longitude of the ARP position (deg)
+        TMODE_HEIGHT_HP         = 0x2003000e, // Latitude of the ARP position (mm)
+        TMODE_SVIN_MIN_DUR      = 0x40030010, // survey in minimum duration s
+        TMODE_SVIN_ACC_LIMIT    = 0x40030011, // Survey-in position accuracy limit mm
     };
 
     // enum not finished, but not needed.  The rest is not needed.
@@ -452,6 +475,12 @@ typedef struct
         SIGNAL_BDS = 0x10310022,      // BeiDou Enable
         SIGNAL_BDS_B1 = 0x1031000d,   // BeiDou B1I
         SIGNAL_BDS_B2 = 0x1031000e,   // BeiDou B2I
+        SIGNAL_GLO          = 0x10310025,
+        SIGNAL_GLO_L1       = 0x10310018,
+        SIGNAL_GLO_L2       = 0x1031001a,
+        SIGNAL_QZSS         = 0x10310024,
+        SIGNAL_QZSS_L1CA    = 0x10310012,
+        SIGNAL_QZSS_L2C     = 0x10310015
 
     };
 
@@ -563,10 +592,17 @@ typedef struct
 
     enum
     {
-        MSGOUT_SVIN = 0x2091008b,
-        TMODE_MODE = 0x20030001,
-        TMODE_SVIN_MIN_DUR = 0x40030010,    // survey in minimum duration s
-        TMODE_SVIN_ACC_LIMIT = 0x40030011,  // Survey-in position accuracy limit mm
+        MSGOUT_SVIN             = 0x2091008b,
+        TMODE_MODE              = 0x20030001, // Receiver mode: 0-disabled, 1-survey-in, 2-fixed
+        TMODE_POS_TYPE          = 0x20030002, // Determines whether the ARP position is given in ECEF or LAT/LON/HEIGHT: 0-ECEF, 1-LLH
+        TMODE_LAT               = 0x40030009, // Latitude of the ARP position (deg)
+        TMODE_LON               = 0x4003000a, // Longitude of the ARP position (deg)
+        TMODE_HEIGHT            = 0x4003000b, // Latitude of the ARP position (cm)
+        TMODE_LAT_HP            = 0x2003000c, // Latitude of the ARP position (deg)
+        TMODE_LON_HP            = 0x2003000d, // Longitude of the ARP position (deg)
+        TMODE_HEIGHT_HP         = 0x2003000e, // Latitude of the ARP position (mm)
+        TMODE_SVIN_MIN_DUR      = 0x40030010, // survey in minimum duration s
+        TMODE_SVIN_ACC_LIMIT    = 0x40030011, // Survey-in position accuracy limit mm
     };
 
     // enum not finished, but not needed.  The rest is not needed.
@@ -581,6 +617,12 @@ typedef struct
         SIGNAL_BDS = 0x10310022,      // BeiDou Enable
         SIGNAL_BDS_B1 = 0x1031000d,   // BeiDou B1I
         SIGNAL_BDS_B2 = 0x1031000e,   // BeiDou B2I
+        SIGNAL_GLO          = 0x10310025,
+        SIGNAL_GLO_L1       = 0x10310018,
+        SIGNAL_GLO_L2       = 0x1031001a,
+        SIGNAL_QZSS         = 0x10310024,
+        SIGNAL_QZSS_L1CA    = 0x10310012,
+        SIGNAL_QZSS_L2C     = 0x10310015
 
     };
 

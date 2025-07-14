@@ -22,6 +22,8 @@
 #include <stdio.h>
 #include <cassert>
 #include <chrono>
+#include <cmath>
+#include <iomanip>
 #include <cstring>
 #include <sstream>
 
@@ -130,28 +132,94 @@ bool UBX::send_message(uint8_t msg_class, uint8_t msg_id, UBX_message_t &message
     return true;
 }
 
-void UBX::start_survey_in()
+void UBX::start_survey_in(uint32_t survey_in_time_s, uint32_t survey_in_accuracy_m)
 {
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
     out_message_.CFG_TMODE3.flags = CFG_TMODE3_t::SURVEY_IN;
-    out_message_.CFG_TMODE3.svinMinDur = 60;   // Wait at least 1 minute
-    out_message_.CFG_TMODE3.svinAccLimit = 3;  // At least within 3 centimeters
+    out_message_.CFG_TMODE3.svinMinDur = survey_in_time_s;   // in seconds
+    out_message_.CFG_TMODE3.svinAccLimit = survey_in_accuracy_m * 10000;  // Convert from m to [0.1 mm]
     send_message(CLASS_CFG, CFG_TMODE3, out_message_, sizeof(CFG_TMODE3_t));
+
+    // Debug printout
+    std::cout << "Survey-In Started: ACC : " << survey_in_accuracy_m << " m, Dur : "
+              << survey_in_time_s << " s" << std::endl;
+}
+
+void UBX::disable_survey_in()
+{
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
+    out_message_.CFG_TMODE3.flags = CFG_TMODE3_t::DISABLED;
+    send_message(CLASS_CFG, CFG_TMODE3, out_message_, sizeof(CFG_TMODE3_t));
+    std::cout << "Survey-In Disabled" << std::endl;
+}
+
+void UBX::set_fixed_lla_hp(double lat_deg, double lon_deg, double alt_m, double position_accuracy_m)
+{
+    // Check basic valid ranges
+    if (lat_deg < -90.0 || lat_deg > 90.0) {
+        std::cout << "Invalid latitude value." << std::endl;
+        return;
+    }
+    if (lon_deg < -180.0 || lon_deg > 180.0) {
+        std::cout << "Invalid longitude value." << std::endl;
+        return;
+    }
+
+    // Round values to practical, high precision limits
+    lat_deg = std::round(lat_deg * 1e9) / 1e9;
+    lon_deg = std::round(lon_deg * 1e9) / 1e9;
+    alt_m   = std::round(alt_m   * 1e3) / 1e3;
+
+    // Convert to UBX protocol scaled fields
+    int64_t lat_scaled = static_cast<int64_t>(std::round(lat_deg * 1e7));
+    int64_t lon_scaled = static_cast<int64_t>(std::round(lon_deg * 1e7));
+    int64_t alt_scaled = static_cast<int64_t>(std::round(alt_m * 100.0));
+
+    // Extract high precision (HP) parts
+    int8_t lat_hp = static_cast<int8_t>(std::round(lat_deg * 1e9) - (lat_scaled * 100));
+    int8_t lon_hp = static_cast<int8_t>(std::round(lon_deg * 1e9) - (lon_scaled * 100));
+    int8_t alt_hp = static_cast<int8_t>(std::round(alt_m * 10000.0) - (alt_scaled * 10));
+
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
+    // Setup CFG-TMODE3 message
+    out_message_.CFG_TMODE3.flags        = CFG_TMODE3_t::FIXED | CFG_TMODE3_t::LLA;
+    out_message_.CFG_TMODE3.ecefXOrLat   = static_cast<int32_t>(lat_scaled);
+    out_message_.CFG_TMODE3.ecefYOrLon   = static_cast<int32_t>(lon_scaled);
+    out_message_.CFG_TMODE3.ecefZOrAlt   = static_cast<int32_t>(alt_scaled);
+    out_message_.CFG_TMODE3.ecefXOrLatHP = lat_hp;
+    out_message_.CFG_TMODE3.ecefYOrLonHP = lon_hp;
+    out_message_.CFG_TMODE3.ecefZOrAltHP = alt_hp;
+    out_message_.CFG_TMODE3.fixedPosAcc  = static_cast<uint32_t>(position_accuracy_m * 10000.0);
+
+    // Send message to GNSS module
+    send_message(CLASS_CFG, CFG_TMODE3, out_message_, sizeof(CFG_TMODE3_t));
+
+    // Debug printout
+    std::cout << "Fixed LLA mode set: Lat " << std::fixed << std::setprecision(9) << lat_deg
+              << "°, Lon " << lon_deg
+              << "°, Alt " << std::setprecision(3) << alt_m << " m" << std::endl;
 }
 
 void UBX::disable_nmea()
 {
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
     DBG("Disabling NMEA messages ");
     if (major_version_ <= 23)
     {
         DBG("with old protocol\n");
         using CF = CFG_PRT_t;
-        memset(&out_message_, 0, sizeof(CF));
         out_message_.CFG_PRT.portID = CF::PORT_USB | CF::PORT_UART1;
         out_message_.CFG_PRT.baudrate = 921600;
         out_message_.CFG_PRT.outProtoMask = CF::OUT_UBX | CF::OUT_RTCM3;
         out_message_.CFG_PRT.inProtoMask = CF::OUT_UBX | CF::OUT_RTCM3;
         out_message_.CFG_PRT.flags = CF::CHARLEN_8BIT | CF::PARITY_NONE | CF::STOP_BITS_1;
         send_message(CLASS_CFG, CFG_PRT, out_message_, sizeof(CF));
+
+        std::cout << "Disabling NMEA messages through OLD Protocol." << std::endl;
     }
     else
     {
@@ -159,39 +227,49 @@ void UBX::disable_nmea()
         using CV = CFG_VALSET_t;
         configure(CV::VERSION_0, CV::RAM, 0, CV::USB_INPROT_NMEA, 1);
         configure(CV::VERSION_0, CV::RAM, 0, CV::USB_OUTPROT_NMEA, 1);
+
+        std::cout << "Disabling NMEA messages through NEW Protocol." << std::endl;
     }
 }
 
 void UBX::set_dynamic_mode()
 {
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
     DBG("Setting dynamic mode ");
     if (major_version_ <= 23)
     {
         DBG("with old protocol\n");
-        memset(&out_message_, 0, sizeof(CFG_NAV5_t));
         out_message_.CFG_NAV5.mask = CFG_NAV5_t::MASK_DYN;
-        out_message_.CFG_NAV5.dynModel = CFG_NAV5_t::DYNMODE_AIRBORNE_4G;
+        out_message_.CFG_NAV5.dynModel = CFG_NAV5_t::DYNMODE_STATIONARY;
         send_message(CLASS_CFG, CFG_NAV5, out_message_, sizeof(CFG_NAV5_t));
+
+        std::cout << "Setting dynamic mode to Stationary through OLD Protocol." << std::endl;
     }
     else
     {
         DBG("with new protocol\n");
         using CV = CFG_VALSET_t;
-        configure(CV::VERSION_0, CV::RAM, CV::DYNMODE_AIRBORNE_1G, CV::DYNMODEL, 1);
+        configure(CV::VERSION_0, CV::RAM, CV::DYNMODE_STATIONARY, CV::DYNMODEL, 1);
+
+        std::cout << "Setting dynamic mode to Stationary through NEW Protocol." << std::endl;
     }
 }
 
 void UBX::set_nav_rate(uint8_t period_ms)
 {
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
     DBG("Setting nav rate to %d\n", period_ms);
     if (major_version_ <= 23)
     {
         DBG("Using old protocol\n");
-        memset(&out_message_, 0, sizeof(CFG_RATE_t));
         out_message_.CFG_RATE.measRate = period_ms;
         out_message_.CFG_RATE.navRate = 1;
         out_message_.CFG_RATE.timeRef = CFG_RATE_t::TIME_REF_UTC;
         send_message(CLASS_CFG, CFG_RATE, out_message_, sizeof(CFG_RATE_t));
+
+        std::cout << "Setting nav rate to " << static_cast<int>(period_ms) << " ms through OLD Protocol." << std::endl;
     }
     else
     {
@@ -200,37 +278,28 @@ void UBX::set_nav_rate(uint8_t period_ms)
         configure(CV::VERSION_0, CV::RAM, period_ms, CV::RATE_MEAS, 1);
         configure(CV::VERSION_0, CV::RAM, 1, CV::RATE_NAV, 1);
         configure(CV::VERSION_0, CV::RAM, CV::TIME_REF_UTC, CV::RATE_TIMEREF, 1);
+
+        std::cout << "Setting nav rate to " << static_cast<int>(period_ms) << " ms through NEW Protocol." << std::endl;
     }
 }
-// void UBX::set_nav_rate(uint8_t period_ms) {
-
-//   DBG("Setting nav rate to %d\n", period_ms);
-
-//   configure(CFG_VALSET_t::VERSION_0, CFG_VALSET_t::RAM, period_ms,
-//             CFG_VALSET_t::RATE_MEAS, byte);
-//   configure(CFG_VALSET_t::VERSION_0, CFG_VALSET_t::RAM, 1,
-//             CFG_VALSET_t::RATE_NAV, byte);
-//   configure(CFG_VALSET_t::VERSION_0, CFG_VALSET_t::RAM,
-//             CFG_VALSET_t::TIME_REF_UTC, CFG_VALSET_t::RATE_TIMEREF, byte);
-// }
 
 void UBX::enable_message(uint8_t msg_cls, uint8_t msg_id, uint8_t rate)
 {
     DBG("Requesting %x:%x message with period=%d ", msg_cls, msg_id, rate);
-    // if (major_version_ <= 23)
+
     DBG("Using old protocol\n");
-    memset(&out_message_, 0, sizeof(CFG_MSG_t));
+
+    std::memset(&out_message_, 0, sizeof(out_message_));
+
     out_message_.CFG_MSG.msgClass = msg_cls;
     out_message_.CFG_MSG.msgID = msg_id;
     out_message_.CFG_MSG.rate = rate;
     send_message(CLASS_CFG, CFG_MSG, out_message_, sizeof(CFG_MSG_t));
-    // }
-    // else
-    // {
-    //     DBG("Using new protocol\n");
-    //     using CV = CFG_VALSET_t;
-    //     configure(CV::VERSION_0, CV::RAM, 1, CV::MSGOUT_PVT, 1);
-    // }
+
+    std::cout << "Enabled message " << static_cast<int>(msg_cls) << ":"
+              << static_cast<int>(msg_id) << " with rate " << static_cast<int>(rate)
+              << " through OLD Protocol." << std::endl;
+
 }
 
 bool UBX::read_cb(uint8_t byte)
@@ -496,7 +565,7 @@ void UBX::configure(uint8_t version,
                     uint32_t cfgDataKey,
                     uint8_t size)
 {
-    memset(&out_message_, 0, sizeof(CFG_VALSET_t));
+    std::memset(&out_message_, 0, sizeof(out_message_));
     out_message_.CFG_VALSET.version = version;
     out_message_.CFG_VALSET.layer = layer;
     if (size == 1)
@@ -509,21 +578,32 @@ void UBX::configure(uint8_t version,
     }
     out_message_.CFG_VALSET.cfgDataKey = cfgDataKey;
     send_message(CLASS_CFG, CFG_VALSET, out_message_, sizeof(CFG_VALSET_t));
+
+    std::cout << "Configured: Version " << static_cast<int>(version)
+              << ", Layer " << static_cast<int>(layer)
+              << ", Key " << cfgDataKey
+              << ", Data " << cfgData
+              << ", Size " << static_cast<int>(size) << std::endl;
 }
 
 void UBX::get_configuration(uint8_t version, uint8_t layer, uint32_t cfgDataKey)
 {
-    memset(&out_message_, 0, sizeof(CFG_VALGET_t));
+    memset(&out_message_, 0, sizeof(out_message_));
     out_message_.CFG_VALGET.version = version;
     out_message_.CFG_VALGET.layer = layer;
     out_message_.CFG_VALGET.cfgDataKey = cfgDataKey;
     send_message(CLASS_CFG, CFG_VALGET, out_message_, sizeof(CFG_VALGET_t));
+
+    std::cout << "Requested configuration: Version " << static_cast<int>(version)
+              << ", Layer " << static_cast<int>(layer)
+              << ", Key " << cfgDataKey << std::endl;
 }
 
 void UBX::write(const uint8_t byte)
 {
     ser_.write(&byte, 1);
 }
+
 void UBX::write(const uint8_t *byte, const size_t size)
 {
     ser_.write(byte, size);
@@ -534,7 +614,7 @@ void UBX::version_cb()
     int protocol_version;
     std::string module_type;
     int firmware_version;
-    for (int i = 0; i < 20; ++i)
+    for (int i = 0; i < 30; ++i)
     {
         if (strncmp(in_message_.MON_VER.extension[i], "PROTVER=", 8) == 0)
         {
@@ -546,9 +626,10 @@ void UBX::version_cb()
         }
     }
 
-    printf("Connected:\n");
-    printf("Module: %s\n", module_name_);
-    printf("Protocol Version: %d.%d\n\n", major_version_, minor_version_);
+    std::cout << "Connected: Yes" << std::endl;
+    std::cout << "Module: " << module_name_ << std::endl;
+    std::cout << "Protocol Version: " << major_version_ << "." << minor_version_ << std::endl << std::endl;
+
     got_ver_ = true;
 }
 
@@ -588,6 +669,8 @@ void UBX::extract_version_string(const char *str)
 void UBX::extract_module_name(const char *str)
 {
     const char *s = str + 4;
+    memset(module_name_, 0, sizeof(module_name_));  // clear buffer before filling
+    
     for (int i = 0; i < sizeof(module_name_); i++)
     {
         if (*s == 0)

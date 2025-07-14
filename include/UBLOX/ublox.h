@@ -36,7 +36,7 @@ namespace ublox
 {
 class UBLOX : public SerialListener, public RTCMListener
 {
-    static constexpr int MAX_NUM_TRIES = 3;
+    static constexpr int MAX_NUM_TRIES = 5;
 
 public:
     typedef enum
@@ -56,8 +56,8 @@ public:
     UBLOX(SerialInterface& ser);
     ~UBLOX();
 
-    void config_rover(SerialInterface* interface);
-    void config_base(SerialInterface* interface, const int type = STATIONARY);
+    void config_base(SerialInterface* interface, const int type = STATIONARY, 
+                     const int survey_in_time_s = 60, const int survey_in_accuracy_m = 3);
 
     // UBLOX receiver read/write
     void read_cb(const uint8_t* buf, const size_t size) override;
@@ -66,7 +66,28 @@ public:
     inline void registerEphCallback(const NavParser::eph_cb& cb) { nav_.registerCallback(cb); }
     inline void registerGephCallback(const NavParser::geph_cb& cb) { nav_.registerCallback(cb); }
 
-    void got_rtcm(const uint8_t* buf, const size_t size) override;
+    RTCM& getRTCM() { return rtcm_; }
+
+    virtual void got_rtcm(const uint8_t* buf, const size_t size) override;
+
+    void start_survey_in(uint32_t dur_in_s, uint32_t acc_in_m) 
+    {
+        ubx_.start_survey_in(dur_in_s, acc_in_m);
+    }
+
+    void set_fixed_lla_hp(double lat_deg, double lon_deg, double alt_m, double position_accuracy_m)
+    {
+        ubx_.set_fixed_lla_hp(lat_deg, lon_deg, alt_m, position_accuracy_m);
+    }
+
+    void disable_survey_in()
+    {
+        ubx_.disable_survey_in();
+    };
+
+    void enable_rtcm_messages();
+
+    void disable_rtcm_messages();
 
 private:
     void poll_value();

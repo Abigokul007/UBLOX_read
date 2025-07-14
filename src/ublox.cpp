@@ -48,6 +48,7 @@ UBLOX::UBLOX(SerialInterface &ser) : ser_(ser), ubx_(ser)
 
     // configure the parsers/Enable Messages
     ubx_.disable_nmea();
+    
     ubx_.set_nav_rate(200);
 
     ubx_.enable_message(CLASS_NAV, NAV_PVT, 1);
@@ -57,7 +58,36 @@ UBLOX::UBLOX(SerialInterface &ser) : ser_(ser), ubx_(ser)
     ubx_.enable_message(CLASS_RXM, RXM_SFRBX, 1);
 }
 
-void UBLOX::config_base(SerialInterface *interface, const int type)
+void UBLOX::enable_rtcm_messages() 
+{
+
+    ubx_.enable_message(CLASS_RTCM, RTCM_1005, 1);  // Ref Station Position
+    ubx_.enable_message(CLASS_RTCM, RTCM_1077, 1);  // GPS MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1087, 1);  // GLONASS MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1097, 1);  // Galileo MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1127, 1);  // Beidou MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases   
+
+}
+
+void UBLOX::disable_rtcm_messages()
+{
+    ubx_.enable_message(CLASS_RTCM, RTCM_1005, 0);  // Ref Station Position
+    ubx_.enable_message(CLASS_RTCM, RTCM_1077, 0);  // GPS MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1087, 0);  // GLONASS MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1097, 0);  // Galileo MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1127, 0);  // Beidou MSM7
+    ubx_.enable_message(CLASS_RTCM, RTCM_1074, 0);  // GPS MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1084, 0);  // GLONASS MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1094, 0);  // Galileo MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1124, 0);  // Beidou MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_0, 0);  // UBLOX Proprietary RTCM
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_1, 0);  // UBLOX Proprietary RTCM
+    ubx_.enable_message(CLASS_RTCM, RTCM_1230, 0);  // GLONASS Biases
+}
+
+void UBLOX::config_base(SerialInterface* interface, const int type, 
+                     const int survey_in_time_s, const int survey_in_accuracy_m)
 {
     assert(type == MOVING || type == STATIONARY);
 
@@ -66,49 +96,19 @@ void UBLOX::config_base(SerialInterface *interface, const int type)
 
     rtcm_.registerListener(this);
 
-    // Request RTCM messages
-    using CV = CFG_VALSET_t;
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_4072_0USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_4072_1USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_1077USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_1087USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_1097USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_1127USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::RTCM_1230USB, 1);
+    disable_rtcm_messages(); 
 
     if (type == STATIONARY)
     {
+        using CV = CFG_VALSET_t;
+
         ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::MSGOUT_SVIN, 1);
         ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::TMODE_MODE, 1);
         ubx_.configure(CV::VERSION_0, CV::RAM, 500000, CV::TMODE_SVIN_ACC_LIMIT, 2);
         ubx_.configure(CV::VERSION_0, CV::RAM, 119, CV::TMODE_SVIN_MIN_DUR, 2);
-        ubx_.start_survey_in();
+
+        ubx_.start_survey_in(survey_in_time_s, survey_in_accuracy_m);
     }
-}
-
-void UBLOX::config_rover(SerialInterface *interface)
-{
-    type_ = ROVER;
-
-    // Disable the output of extra RTCM messages
-    using CV = CFG_VALSET_t;
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_4072_0USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_4072_1USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_1077USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_1087USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_1097USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_1127USB, 1);
-    ubx_.configure(CV::VERSION_0, CV::RAM, 0, CV::RTCM_1230USB, 1);
-
-    static RTCM debug;
-
-    // forward any information over the port
-    rtk_interface_ = interface;
-    interface->add_callback([this](const uint8_t *buf, size_t size) {
-        this->ser_.write(buf, size);
-
-        debug.read_cb(buf, size);
-    });
 }
 
 UBLOX::~UBLOX()
@@ -143,7 +143,8 @@ void UBLOX::got_rtcm(const uint8_t *buf, const size_t size)
     // If we are a base, forward this RTCM message out over our interface
     if (type_ == BASE)
     {
-        rtk_interface_->write(buf, size);
+        // Base class no-op or log
+        printf("[UBLOX] RTCM message received (%zu bytes).\n", size);
     }
 }
 

@@ -39,7 +39,7 @@ void RTCM::restart()
     parse_state_ = ParseState::START;
     start_message_ = false;
     end_message_ = false;
-}
+}            
 
 bool RTCM::parsing_message() const
 {

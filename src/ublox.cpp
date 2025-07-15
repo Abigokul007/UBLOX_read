@@ -94,7 +94,7 @@ void UBLOX::config_base(SerialInterface* interface, const int type,
     type_ = BASE;
     rtk_interface_ = interface;
 
-    rtcm_.registerListener(this);
+    // rtcm_.registerListener(this);
 
     disable_rtcm_messages(); 
 

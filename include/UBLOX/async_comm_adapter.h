@@ -4,6 +4,7 @@
 #include "async_comm/comm.h"
 #include "async_comm/serial.h"
 #include "async_comm/udp.h"
+#include "async_comm/tcp_client.h"
 
 namespace ac_adapter
 {
@@ -15,6 +16,31 @@ public:
         std::string remote_host = "localhost",
         uint16_t remote_port = 16415)
         : async_comm::UDP(bind_host, bind_port, remote_host, remote_port)
+    {
+        register_listener(*this);
+    }
+
+    void write(const uint8_t* buf, const size_t size) override
+    {
+        async_comm::Comm::send_bytes(buf, size);
+    }
+
+    void receive_callback(const uint8_t* buf, const size_t size) override
+    {
+        if (cb_)
+            cb_(buf, size);
+        for (auto& l : SerialInterface::listeners_)
+        {
+            l->read_cb(buf, size);
+        }
+    }
+};
+
+class TCP : public async_comm::TCPClient, public SerialInterface, public async_comm::CommListener
+{
+public:
+    TCP(std::string host = "rtk.geodnet.com", uint16_t port = 2101)
+        : async_comm::TCPClient(host, port)
     {
         register_listener(*this);
     }

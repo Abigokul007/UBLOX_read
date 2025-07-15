@@ -1,45 +1,41 @@
+#pragma once
+
+#include <stdint.h>
+#include <fstream>
+#include <functional>
 #include <iostream>
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <cstring>
-#include <unistd.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <chrono>
-#include <thread>
-#include <vector>
-#include <cmath>
 
-class NTRIPClient {
+#include "UBLOX/parsers/rtcm.h"
+#include "UBLOX/serial_interface.h"
+#include "UBLOX/ntrip_utils.h"
+
+namespace ntrip
+{
+class NTRIP : public SerialListener, public RTCMListener, public ntrip::NTRIPUtils
+{
 public:
-    NTRIPClient(const std::string& host, int port,
-                const std::string& mountpoint,
-                const std::string& username,
-                const std::string& password,
-                double lat, double lon, double alt)
-        : host_(host), port_(port), mountpoint_(mountpoint),
-          username_(username), password_(password),
-          latitude_(lat), longitude_(lon), altitude_(alt) {}
 
-    bool connect_and_stream();
-    void close();
+    NTRIP(SerialInterface& ser, const std::string& host, int port,
+            const std::string& mountpoint,
+            const std::string& username,
+            const std::string& password,
+            double lat, double lon, double alt);
+
+    ~NTRIP();
+
+    void config_rtcm();
+
+    // NTRIP read/write
+    void read_cb(const uint8_t* buf, size_t size) override;
+
+    RTCM& getRTCM() { return rtcm_; }
+
+    virtual void got_rtcm(const uint8_t* buf, const size_t size) override;
 
 private:
-    int sock_fd_ = -1;
-    std::string host_;
-    int port_;
-    std::string mountpoint_;
-    std::string username_;
-    std::string password_;
-    double latitude_, longitude_, altitude_;
+    RTCM rtcm_;
+    SerialInterface& ser_;
 
-    std::string build_request_header();
-
-    std::string generate_gga_sentence();
-
-    std::string decimal_to_nmea(double deg, bool is_lat);
-
-    void parse_rtcm_messages(const char* data, size_t len);
 };
+
+} 

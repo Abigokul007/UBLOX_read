@@ -41,6 +41,7 @@ add_library(UBLOX
 	src/bit_tools.cpp
 	src/utctime.cpp
 	src/crc.cpp
+	src/ntrip_utils.cpp
 	src/ntrip.cpp
 )
 target_include_directories(UBLOX PUBLIC include)

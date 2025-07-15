@@ -101,6 +101,7 @@ private:
     rtk_type_t type_;
     std::ofstream log_file_;
 };
+
 }  // namespace ublox
 
 #endif

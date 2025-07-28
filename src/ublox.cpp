@@ -51,6 +51,7 @@ UBLOX::UBLOX(SerialInterface &ser) : ser_(ser), ubx_(ser)
     
     ubx_.set_nav_rate(200);
 
+    ubx_.enable_message(CLASS_NAV, NAV_SVIN, 1);
     ubx_.enable_message(CLASS_NAV, NAV_PVT, 1);
     ubx_.enable_message(CLASS_NAV, NAV_RELPOSNED, 1);
     ubx_.enable_message(CLASS_NAV, NAV_VELECEF, 1);
@@ -58,7 +59,7 @@ UBLOX::UBLOX(SerialInterface &ser) : ser_(ser), ubx_(ser)
     ubx_.enable_message(CLASS_RXM, RXM_SFRBX, 1);
 }
 
-void UBLOX::enable_rtcm_messages() 
+void UBLOX::enable_rtcm_messages_MSM7() 
 {
 
     ubx_.enable_message(CLASS_RTCM, RTCM_1005, 1);  // Ref Station Position
@@ -68,6 +69,16 @@ void UBLOX::enable_rtcm_messages()
     ubx_.enable_message(CLASS_RTCM, RTCM_1127, 1);  // Beidou MSM7
     ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases   
 
+}
+
+void UBLOX::enable_rtcm_messages_MSM4() 
+{
+    ubx_.enable_message(CLASS_RTCM, RTCM_1005, 1);  // Ref Station Position
+    ubx_.enable_message(CLASS_RTCM, RTCM_1074, 1);  // GPS MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1084, 1);  // GLONASS MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1094, 1);  // Galileo MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1124, 1);  // Beidou MSM4
+    ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases
 }
 
 void UBLOX::disable_rtcm_messages()

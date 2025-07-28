@@ -17,6 +17,7 @@ public:
         uint16_t remote_port = 16415)
         : async_comm::UDP(bind_host, bind_port, remote_host, remote_port)
     {
+        async_comm::Comm::default_message_handler_.debug("TESTING");
         register_listener(*this);
     }
 
@@ -42,6 +43,7 @@ public:
     TCP(std::string host = "rtk.geodnet.com", uint16_t port = 2101)
         : async_comm::TCPClient(host, port)
     {
+        async_comm::Comm::default_message_handler_.debug("TESTING");
         register_listener(*this);
     }
 
@@ -64,7 +66,7 @@ public:
 class Serial : public async_comm::Serial, public SerialInterface, public async_comm::CommListener
 {
 public:
-    Serial(std::string port, unsigned int baud_rate) : async_comm::Serial(port, baud_rate)
+    Serial(std::string port, unsigned int baud_rate) : async_comm::Serial(port, baud_rate)  
     {
         async_comm::Comm::default_message_handler_.debug("TESTING");
         register_listener(*this);

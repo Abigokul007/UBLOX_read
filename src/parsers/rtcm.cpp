@@ -39,7 +39,7 @@ void RTCM::restart()
     parse_state_ = ParseState::START;
     start_message_ = false;
     end_message_ = false;
-}            
+}
 
 bool RTCM::parsing_message() const
 {
@@ -163,16 +163,21 @@ void RTCM::decode()
 {
     new_data_ = true;
     message_len_ = buffer_head_;
+
+    uint16_t msg_id = (in_buffer_[3] << 4) | (in_buffer_[4] >> 4);
+
     if (check_crc())
     {
         for (auto& l : listeners_)
         {
             l->got_rtcm(in_buffer_, buffer_head_);
         }
+
+        // printf("✅ [CRC PASS] RTCM Msg ID: %u, Payload: %lu, Total: %zu\n", msg_id, payload_len_, buffer_head_);
     }
     else
     {
-        printf("RTCM not pass CRC check\n");
+        printf("[CRC FAIL] RTCM Msg ID: %u, Payload: %lu, Total: %zu\n", msg_id, payload_len_, buffer_head_);
     }
 }
 

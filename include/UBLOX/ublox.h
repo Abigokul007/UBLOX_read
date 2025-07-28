@@ -57,7 +57,7 @@ public:
     ~UBLOX();
 
     void config_base(SerialInterface* interface, const int type = STATIONARY, 
-                     const int survey_in_time_s = 60, const int survey_in_accuracy_m = 3);
+                     const int survey_in_time_s = 180, const int survey_in_accuracy_m = 2);
 
     // UBLOX receiver read/write
     void read_cb(const uint8_t* buf, const size_t size) override;
@@ -85,7 +85,9 @@ public:
         ubx_.disable_survey_in();
     };
 
-    void enable_rtcm_messages();
+    void enable_rtcm_messages_MSM7();
+
+    void enable_rtcm_messages_MSM4();
 
     void disable_rtcm_messages();
 

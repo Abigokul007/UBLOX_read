@@ -33,6 +33,7 @@ public:
     virtual void got_rtcm(const uint8_t* buf, const size_t size) override;
 
 private:
+
     RTCM rtcm_;
     SerialInterface& ser_;
 

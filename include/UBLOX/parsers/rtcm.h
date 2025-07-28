@@ -36,7 +36,7 @@ public:
 
 class RTCM : public SerialListener
 {
-    static constexpr int BUFFER_SIZE = 1024;
+    static constexpr int BUFFER_SIZE = 2048;
 
 public:
     RTCM();

@@ -51,12 +51,27 @@ UBLOX::UBLOX(SerialInterface &ser) : ser_(ser), ubx_(ser)
     
     ubx_.set_nav_rate(200);
 
+    enable_messages();
+}
+
+void UBLOX::enable_messages()
+{
     ubx_.enable_message(CLASS_NAV, NAV_SVIN, 1);
     ubx_.enable_message(CLASS_NAV, NAV_PVT, 1);
     ubx_.enable_message(CLASS_NAV, NAV_RELPOSNED, 1);
-    ubx_.enable_message(CLASS_NAV, NAV_VELECEF, 1);
-    ubx_.enable_message(CLASS_RXM, RXM_RAWX, 1);
-    ubx_.enable_message(CLASS_RXM, RXM_SFRBX, 1);
+    // ubx_.enable_message(CLASS_NAV, NAV_VELECEF, 1);
+    // ubx_.enable_message(CLASS_RXM, RXM_RAWX, 1);
+    // ubx_.enable_message(CLASS_RXM, RXM_SFRBX, 1);
+}
+
+void UBLOX::disable_messages()
+{
+    ubx_.enable_message(CLASS_NAV, NAV_SVIN, 0);
+    ubx_.enable_message(CLASS_NAV, NAV_PVT, 0);
+    ubx_.enable_message(CLASS_NAV, NAV_RELPOSNED, 0);
+    // ubx_.enable_message(CLASS_NAV, NAV_VELECEF, 0);
+    // ubx_.enable_message(CLASS_RXM, RXM_RAWX, 0);
+    // ubx_.enable_message(CLASS_RXM, RXM_SFRBX, 0);   
 }
 
 void UBLOX::enable_rtcm_messages_MSM7() 
@@ -67,7 +82,9 @@ void UBLOX::enable_rtcm_messages_MSM7()
     ubx_.enable_message(CLASS_RTCM, RTCM_1087, 1);  // GLONASS MSM7
     ubx_.enable_message(CLASS_RTCM, RTCM_1097, 1);  // Galileo MSM7
     ubx_.enable_message(CLASS_RTCM, RTCM_1127, 1);  // Beidou MSM7
-    ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases   
+    ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_0, 1);  // UBLOX Proprietary RTCM
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_1, 1);  // UBLOX Proprietary RTCM   
 
 }
 
@@ -79,6 +96,8 @@ void UBLOX::enable_rtcm_messages_MSM4()
     ubx_.enable_message(CLASS_RTCM, RTCM_1094, 1);  // Galileo MSM4
     ubx_.enable_message(CLASS_RTCM, RTCM_1124, 1);  // Beidou MSM4
     ubx_.enable_message(CLASS_RTCM, RTCM_1230, 1);  // GLONASS Biases
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_0, 1);  // UBLOX Proprietary RTCM
+    ubx_.enable_message(CLASS_RTCM, RTCM_4072_1, 1);  // UBLOX Proprietary RTCM
 }
 
 void UBLOX::disable_rtcm_messages()
@@ -111,14 +130,7 @@ void UBLOX::config_base(SerialInterface* interface, const int type,
 
     if (type == STATIONARY)
     {
-        using CV = CFG_VALSET_t;
-
-        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::MSGOUT_SVIN, 1);
-        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::TMODE_MODE, 1);
-        ubx_.configure(CV::VERSION_0, CV::RAM, 500000, CV::TMODE_SVIN_ACC_LIMIT, 2);
-        ubx_.configure(CV::VERSION_0, CV::RAM, 119, CV::TMODE_SVIN_MIN_DUR, 2);
-
-        ubx_.start_survey_in(survey_in_time_s, survey_in_accuracy_m);
+        start_survey_in(survey_in_time_s, survey_in_accuracy_m);
     }
 }
 
@@ -146,16 +158,6 @@ void UBLOX::read_cb(const uint8_t *buf, size_t size)
             ubx_.read_cb(buf[i]);
             rtcm_.read_cb(buf + i, 1);
         }
-    }
-}
-
-void UBLOX::got_rtcm(const uint8_t *buf, const size_t size)
-{
-    // If we are a base, forward this RTCM message out over our interface
-    if (type_ == BASE)
-    {
-        // Base class no-op or log
-        printf("[UBLOX] RTCM message received (%zu bytes).\n", size);
     }
 }
 

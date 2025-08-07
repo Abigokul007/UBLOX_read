@@ -31,7 +31,23 @@
 class RTCMListener
 {
 public:
-    virtual void got_rtcm(const uint8_t* buf, const size_t size) = 0;
+
+    void subscribe(const uint16_t msg_id)
+    {
+        subscriptions_.push_back(msg_id);
+    }
+
+    bool subscribed(const uint16_t msg_id) const
+    {
+        return std::find(subscriptions_.begin(), subscriptions_.end(), msg_id) != subscriptions_.end();
+    }
+
+    virtual void got_rtcm(const uint8_t* buf, const size_t size, const uint16_t msg_id) = 0;
+
+    virtual void rtcm_updates(const uint16_t msg_id) = 0;
+
+private:
+    std::vector<uint16_t> subscriptions_;
 };
 
 class RTCM : public SerialListener

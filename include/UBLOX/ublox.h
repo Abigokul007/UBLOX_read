@@ -34,7 +34,7 @@
 
 namespace ublox
 {
-class UBLOX : public SerialListener, public RTCMListener
+class UBLOX : public SerialListener
 {
     static constexpr int MAX_NUM_TRIES = 5;
 
@@ -63,15 +63,19 @@ public:
     void read_cb(const uint8_t* buf, const size_t size) override;
 
     inline void registerUBXListener(UBXListener* l) { ubx_.registerListener(l); }
+    inline void registerRTCMListener(RTCMListener* l) { rtcm_.registerListener(l); }
     inline void registerEphCallback(const NavParser::eph_cb& cb) { nav_.registerCallback(cb); }
     inline void registerGephCallback(const NavParser::geph_cb& cb) { nav_.registerCallback(cb); }
 
-    RTCM& getRTCM() { return rtcm_; }
-
-    virtual void got_rtcm(const uint8_t* buf, const size_t size) override;
-
     void start_survey_in(uint32_t dur_in_s, uint32_t acc_in_m) 
     {
+        using CV = CFG_VALSET_t;
+
+        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::MSGOUT_SVIN, 1);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::TMODE_MODE, 1);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 500000, CV::TMODE_SVIN_ACC_LIMIT, 2);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 119, CV::TMODE_SVIN_MIN_DUR, 2);
+
         ubx_.start_survey_in(dur_in_s, acc_in_m);
     }
 
@@ -82,6 +86,13 @@ public:
 
     void disable_survey_in()
     {
+        using CV = CFG_VALSET_t;
+
+        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::MSGOUT_SVIN, 1);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 1, CV::TMODE_MODE, 1);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 500000, CV::TMODE_SVIN_ACC_LIMIT, 2);
+        ubx_.configure(CV::VERSION_0, CV::RAM, 119, CV::TMODE_SVIN_MIN_DUR, 2);
+
         ubx_.disable_survey_in();
     };
 
@@ -90,6 +101,10 @@ public:
     void enable_rtcm_messages_MSM4();
 
     void disable_rtcm_messages();
+
+    void enable_messages();
+
+    void disable_messages();
 
 private:
     void poll_value();

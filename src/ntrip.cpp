@@ -18,21 +18,10 @@ NTRIP::~NTRIP()
     // Cleanup if necessary
 }
 
-void NTRIP::config_rtcm()
-{
-    rtcm_.registerListener(this);
-}
-
 void NTRIP::read_cb(const uint8_t* buf, size_t size)
 {
     // printf("[NTRIP] Received %zu bytes\n", size);
     rtcm_.read_cb(buf, size);
-}
-
-void NTRIP::got_rtcm(const uint8_t *buf, const size_t size)
-{
-    // Base class no-op or log
-    printf("[UBLOX] RTCM message received (%zu bytes).\n", size);
 }
 
 }  // namespace ntrip

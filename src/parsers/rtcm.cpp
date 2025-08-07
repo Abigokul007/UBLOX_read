@@ -164,13 +164,15 @@ void RTCM::decode()
     new_data_ = true;
     message_len_ = buffer_head_;
 
-    uint16_t msg_id = (in_buffer_[3] << 4) | (in_buffer_[4] >> 4);
+    const uint16_t msg_id = (in_buffer_[3] << 4) | (in_buffer_[4] >> 4);
 
     if (check_crc())
     {
         for (auto& l : listeners_)
         {
-            l->got_rtcm(in_buffer_, buffer_head_);
+            if (l->subscribed(msg_id)) {
+                l->got_rtcm(in_buffer_, buffer_head_, msg_id);
+            }
         }
 
         // printf("✅ [CRC PASS] RTCM Msg ID: %u, Payload: %lu, Total: %zu\n", msg_id, payload_len_, buffer_head_);
